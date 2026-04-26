@@ -1,0 +1,7 @@
+fastapi==0.100.0
+uvicorn
+python-dotenv
+groq
+bcrypt
+python-multipart
+jinja2
