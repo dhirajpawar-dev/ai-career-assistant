@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Career Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🤖 AI Career Assistant</div>
+        <div class="nav-links">
+            <a href="/dashboard" class="active">🎯 Goal</a>
+            <a href="/progress">✅ Progress</a>
+            <a href="/chat">💬 Chat</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Welcome, {{ user_name }}! 👋</h1>
+        <p class="subtitle">Let's plan your career journey</p>
+
+        <div class="card">
+            <h2>🎯 Set Your Career Goal</h2>
+            <p>Tell me what career you want and I'll create a realistic roadmap for you.</p>
+
+            <div class="form-group">
+                <label>What is your career goal?</label>
+                <input type="text" id="goal" placeholder="e.g. I want to become a software engineer / crack UPSC / join Indian Army / become a CA" 
+                    value="{{ goal_data[0] if goal_data else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Your timeline</label>
+                <select id="timeline">
+                    <option value="3 months">3 months</option>
+                    <option value="6 months">6 months</option>
+                    <option value="1 year">1 year</option>
+                    <option value="2 years">2 years</option>
+                    <option value="3 years">3 years</option>
+                    <option value="5 years">5 years</option>
+                </select>
+            </div>
+
+            <button class="btn-primary" onclick="generateRoadmap()">
+                Generate My Roadmap 🚀
+            </button>
+        </div>
+
+        <div class="card" id="roadmap-card" style="display:none">
+            <h2>📋 Your Personalized Roadmap</h2>
+            <div id="roadmap-content" class="roadmap-content"></div>
+            <button class="btn-secondary" onclick="goToProgress()">
+                Track My Progress ✅
+            </button>
+        </div>
+
+        {% if goal_data and goal_data[2] %}
+        <div class="card">
+            <h2>📋 Your Current Roadmap</h2>
+            <p><strong>Goal:</strong> {{ goal_data[0] }}</p>
+            <p><strong>Timeline:</strong> {{ goal_data[1] }}</p>
+            <div class="roadmap-content">{{ goal_data[2] }}</div>
+            <a href="/progress" class="btn-secondary">Track My Progress ✅</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function generateRoadmap() {
+            const goal = document.getElementById('goal').value;
+            const timeline = document.getElementById('timeline').value;
+
+            if (!goal) {
+                alert('Please enter your career goal!');
+                return;
+            }
+
+            const btn = document.querySelector('.btn-primary');
+            btn.textContent = 'Generating... ⏳';
+            btn.disabled = true;
+
+            const response = await fetch('/generate-roadmap', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({goal, timeline})
+            });
+
+            const data = await response.json();
+            
+            document.getElementById('roadmap-content').innerText = data.roadmap;
+            document.getElementById('roadmap-card').style.display = 'block';
+            
+            btn.textContent = 'Generate My Roadmap 🚀';
+            btn.disabled = false;
+
+            document.getElementById('roadmap-card').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function goToProgress() {
+            window.location.href = '/progress';
+        }
+    </script>
+</body>
+</html>

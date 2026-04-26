@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - AI Career Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🤖 AI Career Assistant</div>
+        <div class="nav-links">
+            <a href="/dashboard">🎯 Goal</a>
+            <a href="/progress">✅ Progress</a>
+            <a href="/chat" class="active">💬 Chat</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>💬 Career Chat</h1>
+        {% if goal_data %}
+        <p class="subtitle">AI knows your goal: <strong>{{ goal_data[0] }}</strong></p>
+        {% else %}
+        <p class="subtitle">Set your career goal first for personalized advice!</p>
+        {% endif %}
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        👋 Hi {{ user_name }}! I'm your AI career advisor.
+                        {% if goal_data %}
+                        I know you want to {{ goal_data[0] }}. Ask me anything about your career journey!
+                        {% else %}
+                        Please set your career goal first, then come back to chat for personalized advice!
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-row">
+                <input type="text" id="chat-input" 
+                    placeholder="Ask anything about your career...">
+                <button class="btn-primary" onclick="sendMessage()">Send 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Show user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            addMessage('Thinking...', 'bot', 'typing');
+
+            const response = await fetch('/chat-ai', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message})
+            });
+
+            const data = await response.json();
+
+            // Remove typing indicator
+            document.getElementById('typing').remove();
+
+            // Show AI response
+            addMessage(data.answer, 'bot');
+        }
+
+        function addMessage(text, sender, id='') {
+            const messages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${sender}-message`;
+            if (id) div.id = id;
+            div.innerHTML = `<div class="message-content">${text}</div>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
