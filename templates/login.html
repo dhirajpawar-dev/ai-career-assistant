@@ -24,7 +24,10 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" name="password" placeholder="Enter your password" required>
+                    <div style="position:relative">
+                        <input type="password" name="password" id="login-password" placeholder="Enter your password" required style="padding-right:3rem">
+                        <span onclick="togglePassword('login-password', this)" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;user-select:none;">👁️</span>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary">Sign In</button>
             </form>
@@ -32,5 +35,17 @@
             <p class="auth-link">Don't have an account? <a href="/signup">Sign Up</a></p>
         </div>
     </div>
+    <script>
+    function togglePassword(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+        }
+    }
+    </script>
 </body>
 </html>
