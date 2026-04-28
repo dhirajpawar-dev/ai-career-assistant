@@ -112,3 +112,43 @@ def delete_task(task_id):
     c.execute("DELETE FROM progress WHERE id = ?", (task_id,))
     conn.commit()
     conn.close()
+
+def init_chat_history(conn):
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+    conn.commit()
+
+def save_message(user_id, role, message):
+    conn = sqlite3.connect("career.db")
+    init_chat_history(conn)
+    c = conn.cursor()
+    c.execute("INSERT INTO chat_history (user_id, role, message) VALUES (?, ?, ?)",
+              (user_id, role, message))
+    conn.commit()
+    conn.close()
+
+def get_chat_history(user_id):
+    conn = sqlite3.connect("career.db")
+    init_chat_history(conn)
+    c = conn.cursor()
+    c.execute("SELECT role, message, created_at FROM chat_history WHERE user_id = ? ORDER BY created_at ASC",
+              (user_id,))
+    history = c.fetchall()
+    conn.close()
+    return history
+
+def clear_chat_history(user_id):
+    conn = sqlite3.connect("career.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM chat_history WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()

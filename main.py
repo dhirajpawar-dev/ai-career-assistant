@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from groq import Groq
 from dotenv import load_dotenv
-from database import init_db, signup_user, login_user, save_goal, get_goal, save_task, get_tasks, update_task, delete_task
+from database import init_db, signup_user, login_user, save_goal, get_goal, save_task, get_tasks, update_task, delete_task, save_message, get_chat_history, clear_chat_history
 import os
 import uuid
 import re
@@ -104,11 +104,13 @@ async def chat_page(request: Request):
     if not user:
         return RedirectResponse("/")
     goal_data = get_goal(user["id"])
+    chat_history = get_chat_history(user["id"])
     return templates.TemplateResponse("chat.html", {
         "request": request,
         "user_name": user["name"],
         "user_id": user["id"],
-        "goal_data": goal_data
+        "goal_data": goal_data,
+        "chat_history": chat_history
     })
 
 @app.post("/generate-roadmap")
@@ -224,6 +226,9 @@ async def chat_ai(request: Request):
     if goal_data:
         context = f"The user's career goal is: {goal_data[0]}. Their timeline: {goal_data[1]}."
 
+    # Save user message
+    save_message(user["id"], "user", message)
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -232,7 +237,19 @@ async def chat_ai(request: Request):
         ]
     )
     answer = response.choices[0].message.content
+
+    # Save AI response
+    save_message(user["id"], "assistant", answer)
+
     return JSONResponse({"answer": answer})
+
+@app.post("/clear-chat")
+async def clear_chat(request: Request):
+    user = get_user_from_session(request)
+    if not user:
+        raise HTTPException(status_code=401)
+    clear_chat_history(user["id"])
+    return JSONResponse({"success": True})
 
 @app.post("/review-progress")
 async def review_progress(request: Request):

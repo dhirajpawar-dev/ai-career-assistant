@@ -18,7 +18,14 @@
     </nav>
 
     <div class="container">
-        <h1>💬 Career Chat</h1>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+            <h1>💬 Career Chat</h1>
+            <button class="btn-secondary" onclick="clearHistory()" 
+                style="padding:0.4rem 1rem;font-size:0.85rem">
+                🗑️ Clear History
+            </button>
+        </div>
+
         {% if goal_data %}
         <p class="subtitle">AI knows your goal: <strong>{{ goal_data[0] }}</strong></p>
         {% else %}
@@ -27,6 +34,7 @@
 
         <div class="chat-container">
             <div class="chat-messages" id="chat-messages">
+                <!-- Welcome message -->
                 <div class="message bot-message">
                     <div class="message-content">
                         👋 Hi {{ user_name }}! I'm your AI career advisor.
@@ -37,10 +45,17 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Load chat history -->
+                {% for msg in chat_history %}
+                <div class="message {% if msg[0] == 'user' %}user-message{% else %}bot-message{% endif %}">
+                    <div class="message-content">{{ msg[1] }}</div>
+                </div>
+                {% endfor %}
             </div>
 
             <div class="chat-input-row">
-                <input type="text" id="chat-input" 
+                <input type="text" id="chat-input"
                     placeholder="Ask anything about your career...">
                 <button class="btn-primary" onclick="sendMessage()">Send 🚀</button>
             </div>
@@ -48,16 +63,18 @@
     </div>
 
     <script>
+        // Scroll to bottom on page load
+        const messages = document.getElementById('chat-messages');
+        messages.scrollTop = messages.scrollHeight;
+
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
             if (!message) return;
 
-            // Show user message
             addMessage(message, 'user');
             input.value = '';
 
-            // Show typing indicator
             addMessage('Thinking...', 'bot', 'typing');
 
             const response = await fetch('/chat-ai', {
@@ -68,10 +85,7 @@
 
             const data = await response.json();
 
-            // Remove typing indicator
             document.getElementById('typing').remove();
-
-            // Show AI response
             addMessage(data.answer, 'bot');
         }
 
@@ -87,6 +101,16 @@
             } else {
                 div.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+        }
+
+        async function clearHistory() {
+            if (!confirm('Clear all chat history?')) return;
+            await fetch('/clear-chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            window.location.reload();
         }
 
         document.getElementById('chat-input').addEventListener('keypress', function(e) {
