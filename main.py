@@ -1,22 +1,20 @@
-from starlette.responses import HTMLResponse
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from jinja2 import Environment, FileSystemLoader
 from groq import Groq
 from dotenv import load_dotenv
 from database import init_db, signup_user, login_user, save_goal, get_goal, save_task, get_tasks, update_task, delete_task
 import os
 import uuid
+import re
+import sqlite3
 
 load_dotenv()
 init_db()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-from starlette.templating import Jinja2Templates
 templates = Jinja2Templates(directory="templates")
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -153,40 +151,35 @@ async def generate_roadmap(request: Request):
         messages=[{"role": "user", "content": prompt}]
     )
     full_response = response.choices[0].message.content
-    
-    # Split roadmap and tasks
+
     if "TASKS:" in full_response:
         parts = full_response.split("TASKS:")
         roadmap = parts[0].strip()
         tasks_text = parts[1].strip()
-        
-        # Parse tasks
+
         tasks = []
         for line in tasks_text.split("\n"):
             line = line.strip()
             if line.startswith("- "):
                 task = line[2:].strip()
-                # Remove markdown bold formatting **Task X**:
-                import re
                 task = re.sub(r'\*\*.*?\*\*:\s*', '', task)
                 task = task.strip()
                 if task:
                     tasks.append(task)
-        
-        # Delete old tasks and save new ones
-        conn = __import__('sqlite3').connect("career.db")
+
+        conn = sqlite3.connect("career.db")
         c = conn.cursor()
         c.execute("DELETE FROM progress WHERE user_id = ?", (user["id"],))
         conn.commit()
         conn.close()
-        
+
         for task in tasks:
             if task:
                 save_task(user["id"], task)
     else:
         roadmap = full_response
         tasks = []
-    
+
     save_goal(user["id"], goal, timeline, roadmap)
     return JSONResponse({"roadmap": roadmap, "tasks": tasks})
 
@@ -240,3 +233,49 @@ async def chat_ai(request: Request):
     )
     answer = response.choices[0].message.content
     return JSONResponse({"answer": answer})
+
+@app.post("/review-progress")
+async def review_progress(request: Request):
+    user = get_user_from_session(request)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    tasks = get_tasks(user["id"])
+    goal_data = get_goal(user["id"])
+
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t[2])
+    pending = total - completed
+
+    completed_tasks = [t[1] for t in tasks if t[2]]
+    pending_tasks = [t[1] for t in tasks if not t[2]]
+
+    goal = goal_data[0] if goal_data else "Not set"
+    timeline = goal_data[1] if goal_data else "Not set"
+
+    prompt = f"""
+    You are an honest career advisor reviewing someone's progress.
+    
+    Their goal: {goal}
+    Their timeline: {timeline}
+    Total tasks: {total}
+    Completed tasks: {completed}
+    Pending tasks: {pending}
+    
+    Completed: {completed_tasks}
+    Still pending: {pending_tasks}
+    
+    Give them:
+    1. Honest assessment of their progress
+    2. What they should focus on next (top 2-3 priorities)
+    3. One encouraging but realistic message
+    
+    Keep it concise — maximum 150 words. Be honest, not overly positive.
+    """
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    review = response.choices[0].message.content
+    return JSONResponse({"review": review})
