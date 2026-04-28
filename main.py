@@ -165,7 +165,13 @@ async def generate_roadmap(request: Request):
         for line in tasks_text.split("\n"):
             line = line.strip()
             if line.startswith("- "):
-                tasks.append(line[2:].strip())
+                task = line[2:].strip()
+                # Remove markdown bold formatting **Task X**:
+                import re
+                task = re.sub(r'\*\*.*?\*\*:\s*', '', task)
+                task = task.strip()
+                if task:
+                    tasks.append(task)
         
         # Delete old tasks and save new ones
         conn = __import__('sqlite3').connect("career.db")
