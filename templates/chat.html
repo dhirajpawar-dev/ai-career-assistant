@@ -82,7 +82,11 @@
             if (id) div.id = id;
             div.innerHTML = `<div class="message-content">${text}</div>`;
             messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
+            if (sender === 'user') {
+                messages.scrollTop = messages.scrollHeight;
+            } else {
+                div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         document.getElementById('chat-input').addEventListener('keypress', function(e) {
