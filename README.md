@@ -3,7 +3,7 @@
 A full-stack AI-powered career planning web application that helps anyone plan and track their career journey — whether software engineering, government jobs, army, medicine, or any field.
 
 ## Live Demo
-🚀 [View Live App](#) *(coming soon)*
+🚀 [View Live App](https://ai-career-assistant-ld5b.onrender.com)
 
 ## Features
 - 🔐 **User Authentication** — Secure signup and login system
