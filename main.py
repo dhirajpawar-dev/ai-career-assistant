@@ -138,15 +138,51 @@ async def generate_roadmap(request: Request):
     
     Format it clearly with sections and bullet points.
     Be specific to their country/region if mentioned.
+    
+    After the roadmap, add this exact section:
+    
+    TASKS:
+    - Task 1 description
+    - Task 2 description
+    - Task 3 description
+    (add 5-8 specific actionable tasks based on the roadmap)
     """
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
     )
-    roadmap = response.choices[0].message.content
+    full_response = response.choices[0].message.content
+    
+    # Split roadmap and tasks
+    if "TASKS:" in full_response:
+        parts = full_response.split("TASKS:")
+        roadmap = parts[0].strip()
+        tasks_text = parts[1].strip()
+        
+        # Parse tasks
+        tasks = []
+        for line in tasks_text.split("\n"):
+            line = line.strip()
+            if line.startswith("- "):
+                tasks.append(line[2:].strip())
+        
+        # Delete old tasks and save new ones
+        conn = __import__('sqlite3').connect("career.db")
+        c = conn.cursor()
+        c.execute("DELETE FROM progress WHERE user_id = ?", (user["id"],))
+        conn.commit()
+        conn.close()
+        
+        for task in tasks:
+            if task:
+                save_task(user["id"], task)
+    else:
+        roadmap = full_response
+        tasks = []
+    
     save_goal(user["id"], goal, timeline, roadmap)
-    return JSONResponse({"roadmap": roadmap})
+    return JSONResponse({"roadmap": roadmap, "tasks": tasks})
 
 @app.post("/add-task")
 async def add_task(request: Request):

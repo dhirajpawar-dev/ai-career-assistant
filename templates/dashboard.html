@@ -67,6 +67,8 @@
             </button>
         </div>
 
+        <div id="auto-tasks"></div>
+
         {% if goal_data and goal_data[2] %}
         <div class="card">
             <h2>📋 Your Current Roadmap</h2>
@@ -85,19 +87,23 @@
             customDiv.style.display = select.value === 'custom' ? 'block' : 'none';
         }
 
+        function goToProgress() {
+            window.location.href = '/progress';
+        }
+
         async function generateRoadmap() {
             const goal = document.getElementById('goal').value;
             const select = document.getElementById('timeline-select');
-            const timeline = select.value === 'custom' 
-                ? document.getElementById('custom-timeline').value 
+            const timeline = select.value === 'custom'
+                ? document.getElementById('custom-timeline').value
                 : select.value;
-            if (!timeline) {
-                alert('Please enter your custom timeline!');
-                return;
-            }
 
             if (!goal) {
                 alert('Please enter your career goal!');
+                return;
+            }
+            if (!timeline) {
+                alert('Please enter your custom timeline!');
                 return;
             }
 
@@ -112,18 +118,28 @@
             });
 
             const data = await response.json();
-            
+
             document.getElementById('roadmap-content').innerText = data.roadmap;
             document.getElementById('roadmap-card').style.display = 'block';
-            
+
+            // Show auto-generated tasks
+            if (data.tasks && data.tasks.length > 0) {
+                const tasksDiv = document.getElementById('auto-tasks');
+                tasksDiv.innerHTML = `
+                    <div class="card" style="margin-top:1rem;border-color:#00d4aa">
+                        <h2>✅ Auto-generated Tasks (${data.tasks.length} tasks added to your tracker!)</h2>
+                        <ul style="list-style:none;padding:0">
+                            ${data.tasks.map(t => `<li style="padding:0.5rem 0;border-bottom:1px solid #2d2d44">📌 ${t}</li>`).join('')}
+                        </ul>
+                        <a href="/progress" class="btn-secondary">View Progress Tracker ✅</a>
+                    </div>
+                `;
+            }
+
             btn.textContent = 'Generate My Roadmap 🚀';
             btn.disabled = false;
 
             document.getElementById('roadmap-card').scrollIntoView({behavior: 'smooth'});
-        }
-
-        function goToProgress() {
-            window.location.href = '/progress';
         }
     </script>
 </body>
