@@ -32,6 +32,15 @@
         </div>
 
         <div class="card">
+            <h2>🤖 AI Progress Review</h2>
+            <p>Get personalized AI feedback based on your current progress.</p>
+            <button class="btn-primary" onclick="reviewProgress()" style="margin-top:0.5rem">
+                Review My Progress 🔍
+            </button>
+            <div id="review-result" style="margin-top:1rem"></div>
+        </div>
+
+        <div class="card">
             <h2>Add New Task</h2>
             <div class="task-input-row">
                 <input type="text" id="new-task" placeholder="e.g. Complete Python basics course">
@@ -56,6 +65,29 @@
     </div>
 
     <script>
+        async function reviewProgress() {
+            const btn = event.target;
+            btn.textContent = 'Analyzing... ⏳';
+            btn.disabled = true;
+
+            const response = await fetch('/review-progress', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            document.getElementById('review-result').innerHTML = `
+                <div style="background:#0f1117;border-radius:8px;padding:1rem;border:1px solid #00d4aa;margin-top:0.5rem">
+                    <p style="white-space:pre-wrap;color:#ccc;line-height:1.7">${data.review}</p>
+                </div>
+            `;
+
+            btn.textContent = 'Review My Progress 🔍';
+            btn.disabled = false;
+        }
+
         async function addTask() {
             const task = document.getElementById('new-task').value;
             if (!task) return;
