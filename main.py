@@ -4,9 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from groq import Groq
 from dotenv import load_dotenv
+from itsdangerous import URLSafeTimedSerializer
 from database import init_db, signup_user, login_user, save_goal, get_goal, save_task, get_tasks, update_task, delete_task, save_message, get_chat_history, clear_chat_history
 import os
-import uuid
 import re
 import sqlite3
 
@@ -19,13 +19,18 @@ templates = Jinja2Templates(directory="templates")
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-sessions = {}
+SECRET_KEY = os.getenv("SECRET_KEY", "my-super-secret-key-change-this")
+serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 def get_user_from_session(request: Request):
-    session_id = request.cookies.get("session_id")
-    if session_id and session_id in sessions:
-        return sessions[session_id]
-    return None
+    session_data = request.cookies.get("session_id")
+    if not session_data:
+        return None
+    try:
+        user = serializer.loads(session_data, max_age=604800)
+        return user
+    except:
+        return None
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -48,18 +53,14 @@ async def signup(request: Request, name: str = Form(...), email: str = Form(...)
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
     user = login_user(email, password)
     if user:
-        session_id = str(uuid.uuid4())
-        sessions[session_id] = user
+        session_data = serializer.dumps({"id": user["id"], "name": user["name"]})
         response = RedirectResponse("/dashboard", status_code=303)
-        response.set_cookie("session_id", session_id)
+        response.set_cookie("session_id", session_data, max_age=604800, httponly=True)
         return response
     return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid email or password!"})
 
 @app.get("/logout")
 async def logout(request: Request):
-    session_id = request.cookies.get("session_id")
-    if session_id in sessions:
-        del sessions[session_id]
     response = RedirectResponse("/")
     response.delete_cookie("session_id")
     return response
@@ -226,7 +227,6 @@ async def chat_ai(request: Request):
     if goal_data:
         context = f"The user's career goal is: {goal_data[0]}. Their timeline: {goal_data[1]}."
 
-    # Save user message
     save_message(user["id"], "user", message)
 
     response = client.chat.completions.create(
@@ -238,9 +238,7 @@ async def chat_ai(request: Request):
     )
     answer = response.choices[0].message.content
 
-    # Save AI response
     save_message(user["id"], "assistant", answer)
-
     return JSONResponse({"answer": answer})
 
 @app.post("/clear-chat")
