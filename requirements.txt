@@ -5,3 +5,4 @@ groq
 bcrypt
 python-multipart
 jinja2
+itsdangerous
